@@ -1,0 +1,100 @@
+address = anything:high anything:middle anything:low -> InsteonAddress(high, middle, low)
+
+message_flags = anything:flags -> InsteonMessageFlags(flags)
+
+im_configuration_flags = anything
+
+command = anything:command -> ord(command)
+
+device_category = anything:category -> ord(category)
+device_subcategory = anything:subcategory -> ord(subcategory)
+
+firmware_version = anything:version -> ord(version)
+
+ack = '\x06' -> True
+nak = '\x15' -> False
+acknak = ack | nak
+
+user_data = anything{14}:user_data -> ''.join(user_data)
+
+standard_message_received = '\x02' '\x50' address:address_from address:address_to message_flags:flags command:command_1 command:command_2 -> receiver.receiveMessage(address_from, address_to, flags, command_1, command_2)
+
+extended_message_received = '\x02' '\x51' address:address_from address:address_to message_flags:flags command:command_1 command:command_2 user_data:user_data -> receiver.receiveMessage(address_from, address_to, flags, command_1, command_2, user_data)
+
+x10_received = '\x02' '\x52' anything:rawx10 anything:x10flag -> receiver.received('x10_received', rawx10, x10flag)
+
+all_linking_completed = '\x02' '\x53' anything:link_code anything:all_link_group address:linked device_category:category device_subcategory:subcategory firmware_version:version -> receiver.receive('all_linking_completed', link_code, all_link_group, linked, category, subcategory, version)
+
+button_event_report = '\x02' '\x54' anything:button_event -> receiver.receive('button_event_report', button_event)
+
+user_reset_detected = '\x02' '\x55' -> receiver.receive('user_reset_detected')
+
+all_link_cleanup_failure_report = '\x02' '\x56' '\x01' anything:all_link_group address:address -> receiver.received('all_link_cleanup_failure_report', all_link_group, address)
+
+all_link_record_response = '\x02' '\x57' anything:all_link_record_flags anything:all_link_group address:address anything{3}:link_data -> receiver.receiveAllLinkRecord(all_link_record_flags, all_link_group, address, link_data)
+
+all_link_cleanup_status_report = '\x02' '\x58' acknak:acknak -> receiver.receive('all_link_cleanup_status_report', acknak)
+
+im_info = '\x02' '\x60' address:address device_category:category device_subcategory:subcategory firmware_version:version acknak:acknak -> receiver.receive('im_info', address, category, subcategory, version, acknak)
+
+send_all_link_command_echo = '\x02' '\x61' anything:all_link_group anything:all_link_command anything:broadcast_command_2 acknak:acknak -> receiver.receive('send_all_link_command_echo', all_link_group, all_link_command, broadcast_command_2, acknak)
+
+standard_message_echo = '\x02' '\x62' address:address message_flags:flags ?(not flags.extended) command:command_1 command:command_2 acknak:acknak -> receiver.receiveMessageEcho(address, flags, command_1, command_2, acknak) 
+
+extended_message_echo = '\x02' '\x62' address:address message_flags:flags ?(flags.extended) command:command_1 command:command_2 user_data:user_data acknak:acknak -> receiver.receiveMessageEcho(address, flags, command_1, command_2, acknak, user_data) 
+
+send_x10_echo = '\x02' '\x64' anything:rawx10 anything:x10flag acknak:acknak -> receiver.receive('send_x10_echo', rawx10, x10flag)
+
+start_all_linking_echo = '\x02' '\x64' anything:link_code anything:all_link_group acknak:acknak -> receiver.receive('start_all_linking_echo', link_code, all_link_group, acknak)
+
+cancel_all_linking_echo = '\x02' '\x65' acknak:acknak -> receiver.receive('cancel_all_linking', acknak)
+
+set_host_device_category_echo = '\x02' '\x66' device_category:category device_subcategory:subcategory firmware_version:version acknak:acknak -> receiver.receive('set_host_device_category_echo', category, subcategory, version, acknak)
+
+reset_the_im_echo = '\x02' '\x67' acknak
+
+get_first_all_link_record_echo = '\x02' '\x69' acknak:acknak -> receiver.receiveAllLinkRecordEcho(acknak)
+
+get_next_all_link_record_echo = '\x02' '\x6a' acknak:acknak -> receiver.receiveAllLinkRecordEcho(acknak)
+
+set_im_configuration_echo = '\x02' '\x6b' im_configuration_flags:flags acknak:acknak -> receiver.receive('set_im_configuration_echo', flags, acknak)
+
+get_all_link_record_for_sender_echo = '\x02' '\x6c' acknak -> receiver.receive('get_all_link_record_for_sender_echo', acknak)
+
+led_on_echo = '\x02' '\x6d' acknak:acknak -> receiver.receive('led_on_echo', acknak)
+
+led_off_echo = '\x02' '\x6e' acknak:acknak -> receiver.receive('led_off_echo', acknak)
+
+manage_all_link_record_echo = '\x02' '\x6f' anything:control_code anything:all_link_record_flags anything:all_link_group address:linked anything{3}:link_data acknak:acknak -> receiver.received('manage_all_link_record_echo', control_code, all_link_record_flags, all_link_group, linked, link_data, acknak)
+
+rf_sleep_echo = '\x02' '\x72' anything:command_1_data anything:command_2_data acknak -> receiver.receive('rf_sleep_echo', command_1_data, command_2_data, acknak)
+
+get_im_configuration_echo = '\x02' '\x73' configuration_flags:flags '\x00' '\x00' acknak:acknak -> receiver.receive('get_im_configuration_echo', flags, acknak)
+
+receive = (standard_message_received |
+           extended_message_received |
+           x10_received |
+           all_linking_completed |
+           button_event_report |
+           user_reset_detected |
+           all_link_cleanup_failure_report |
+           all_link_record_response |
+           all_link_cleanup_status_report |
+           im_info |
+           send_all_link_command_echo |
+           standard_message_echo |
+           extended_message_echo |
+           send_x10_echo |
+           start_all_linking_echo |
+           cancel_all_linking_echo |
+           set_host_device_category_echo |
+           reset_the_im_echo |
+           get_first_all_link_record_echo |
+           get_next_all_link_record_echo |
+           set_im_configuration_echo |
+           get_all_link_record_for_sender_echo |
+           led_on_echo |
+           led_off_echo |
+           manage_all_link_record_echo |
+           rf_sleep_echo |
+           get_im_configuration_echo )
